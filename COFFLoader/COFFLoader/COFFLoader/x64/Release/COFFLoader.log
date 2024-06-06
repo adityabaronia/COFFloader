@@ -1,0 +1,11 @@
+﻿  Source.c
+C:\Users\smoke.REDTEAMER\Desktop\COFFLoader\COFFLoader\COFFLoader\Source.c(11,2): warning C4094: untagged 'struct' declared no symbols
+C:\Users\smoke.REDTEAMER\Desktop\COFFLoader\COFFLoader\COFFLoader\Source.c(41,14): warning C4047: 'function': 'SIZE_T' differs in levels of indirection from 'LPDWORD'
+C:\Users\smoke.REDTEAMER\Desktop\COFFLoader\COFFLoader\COFFLoader\Source.c(41,3): warning C4024: 'VirtualAlloc': different types for formal and actual parameter 2
+C:\Users\smoke.REDTEAMER\Desktop\COFFLoader\COFFLoader\COFFLoader\Source.c(50,48): warning C4047: 'function': 'DWORD' differs in levels of indirection from 'LPDWORD'
+C:\Users\smoke.REDTEAMER\Desktop\COFFLoader\COFFLoader\COFFLoader\Source.c(50,37): warning C4024: 'ReadFile': different types for formal and actual parameter 3
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 4 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  COFFLoader.vcxproj -> C:\Users\smoke.REDTEAMER\Desktop\COFFLoader\COFFLoader\x64\Release\COFFLoader.exe

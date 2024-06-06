@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COFFloader</title>
+</head>
+<body>
+<h1>COFFloader</h1>
+<ul>
+<li>COFF Loader is more or less a mini-linker that will perform in-memory linking and execution.</li>
+<li>The COFF loader is a critical component in the execution of programs that are in the COFF format. It performs the necessary steps to load, link, relocate, and execute these programs, ensuring that all dependencies are resolved and that the program can run correctly in its target environment.</li>
+</ul>
+<h2>What is COFF file format(Common object file format) ?</h2>
+<p><em>Object Files</em>: Intermediate files produced by compilers that contain code and data not yet linked into an executable.</p>
+<p>The Common Object File Format (COFF) is a file format for executable, object code, and debugging information. Originally developed for Unix System V, COFF has been widely adopted in various Unix and Unix-like operating systems, as well as in some versions of Microsoft Windows. It provides a standardized way to store and organize the machine code and associated data needed for programs to be executed.</p>
+<h3>Key Features of COFF</h3>
+<ul>
+<li><strong>Standardization</strong>: COFF provides a consistent structure for object files, making it easier for tools like compilers, linkers, and debuggers to work together.</li>
+<li><strong>Modularity</strong>: COFF supports modular programming by allowing multiple object files to be linked together into a single executable.</li>
+<li><strong>Flexibility</strong>: The format includes sections for different types of data (code, initialized data, uninitialized data, etc.) and supports relocation and symbol resolution.</li>
+</ul>
+<h3>Structure of a COFF File</h3>
+<p>A COFF file typically consists of the following parts:</p>
+<ol>
+<li><strong>File Header</strong>: Contains metadata about the file.</li>
+<li><strong>Optional Header</strong>: Provides additional information for executable files, such as the entry point and memory layout.</li>
+<li><strong>Section Headers</strong>: Describe the different sections of the file.</li>
+<li><strong>Sections</strong>: Contain the actual code, data, and other information.</li>
+</ol>
+<h3>File Header</h3>
+<p>The file header contains essential information about the object file:</p>
+<ul>
+<li>Machine: The target machine type (e.g., x86, x86_64).</li>
+<li>Number of Sections: The number of sections in the file.</li>
+<li>Time Stamp: The time the file was created.</li>
+<li>Pointer to Symbol Table: The file offset of the symbol table.</li>
+<li>Number of Symbols: The number of entries in the symbol table.</li>
+<li>Size of Optional Header: The size of the optional header.</li>
+<li>Characteristics: Flags indicating attributes of the file (e.g., if it is relocatable, executable, etc.).</li>
+</ul>
+<h3>Optional Header</h3>
+<p>The optional header, which is included in executable files, provides additional information such as:</p>
+<ul>
+<li>Entry Point: The address of the first instruction to execute.</li>
+<li>Code Size: The size of the code section.</li>
+<li>Initialized Data Size: The size of the initialized data section.</li>
+<li>Uninitialized Data Size: The size of the uninitialized data section (BSS).</li>
+<li>Base of Code/Data: The preferred load addresses for code and data sections.</li>
+</ul>
+<h3>Section Headers</h3>
+<p>Each section header provides details about a section, including:</p>
+<ul>
+<li>Name: The name of the section (e.g., .text, .data).</li>
+<li>Virtual Size: The size of the section when loaded into memory.</li>
+<li>Virtual Address: The address where the section should be loaded.</li>
+<li>Size of Raw Data: The size of the section's data in the file.</li>
+<li>Pointer to Raw Data: The file offset of the section's data.</li>
+<li>Relocation Entries: Information about relocations needed for the section.</li>
+<li>Line Numbers: Information for debugging.</li>
+<li>Characteristics: Flags indicating attributes of the section (e.g., executable, readable, writable).</li>
+</ul>
+<h3>Sections</h3>
+<p>Common sections in a COFF file include:</p>
+<ul>
+<li>.text: Contains the executable code.</li>
+<li>.data: Contains initialized data.</li>
+<li>.bss: Contains uninitialized data.</
+    li>
+    <li>.rdata: Contains read-only data.</li>
+    <li>.edata: Contains export information (functions and variables that can be used by other modules).</li>
+    <li>.idata: Contains import information (functions and variables imported from other modules).</li>
+    <li>.debug: Contains debugging information.</li>
+    </ul>
+    <h3>Symbol Table</h3>
+    <p>The symbol table provides information about symbols (variables, functions, etc.) used in the file:</p>
+    <ul>
+    <li>Name: The name of the symbol.</li>
+    <li>Value: The value associated with the symbol (e.g., an address).</li>
+    <li>Section Number: The section where the symbol is defined.</li>
+    <li>Type: The type of symbol (e.g., function, data).</li>
+    <li>Storage Class: The storage class of the symbol (e.g., external, static).</li>
+    <li>Number of Auxiliary Symbols: The number of auxiliary symbol table entries.</li>
+    </ul>
+    <h3>Relocation Entries</h3>
+    <p>Relocation entries are used to adjust addresses in the code and data sections when the file is loaded into memory. Each entry specifies:</p>
+    <ul>
+    <li>Virtual Address: The address that needs to be adjusted.</li>
+    <li>Symbol Index: The index of the symbol in the symbol table.</li>
+    <li>Type: The type of relocation (e.g., relative, absolute).</li>
+    </ul>
+    <h2>What is Difference between COFF and PE file?</h2>
+    <p>The Common Object File Format (COFF) and the Portable Executable (PE) file format are both used for executable files, object code, and related data. However, they serve different purposes and have different structures. Here’s a detailed comparison between COFF and PE file formats:</p>
+    <h3>Common Object File Format (COFF)</h3>
+    <p><strong>Origin and Use:</strong></p>
+    <ul>
+    <li>COFF was originally developed for Unix System V and is used primarily in Unix and Unix-like operating systems.</li>
+    <li>It is a standard format for object files, which are intermediate files generated by compilers before linking into executables.</li>
+    </ul>
+    <h4>Structure:</h4>
+    <ul>
+    <li>File Header: Contains metadata about the file, such as target machine, number of sections, and pointers to other parts of the file.</li>
+    <li>Optional Header: Additional information, usually for executable files, like entry point, code size, etc.</li>
+    <li>Section Headers: Information about each section (e.g., .text, .data, .bss).</li>
+    <li>Sections: Contains the actual code, data, and other information.</li>
+    <li>Symbol Table: Information about symbols (variables, functions) used in the file.</li>
+    <li>Relocation Entries: Details about addresses that need adjustment when the file is loaded.</li>
+    </ul>
+    <p><strong>Use Cases:</strong></p>
+    <ul>
+    <li>Primarily used for object files during the compilation process.</li>
+    <li>Suitable for modular programming and linking multiple object files into a single executable.</li>
+    </ul>
+    <h3>Portable Executable (PE)</h3>
+    <p><strong>Origin and Use:</strong></p>
+    <ul>
+    <li>PE format was developed by Microsoft and is used in Windows operating systems.</li>
+    <li>It is an extension of the COFF format and is used for executable files (EXE), dynamic link libraries (DLL), and other types of files in Windows.</li>
+    </ul>
+    <h4>Structure:</h4>
+    <ul>
+    <li>DOS Header: Ensures compatibility with older DOS systems and contains a pointer to the PE header.</li>
+    <li>PE Header: Contains the COFF file header and additional fields specific to Windows executables.</li>
+    <li>Optional Header: Provides important information for the loader, such as entry point, image base, section alignment, and subsystem requirements.</li>
+    <li>Section Table: Information about each section in the file (e.g., .text, .data, .rdata, .rsrc, .reloc).</li>
+    <li>Sections: Contains the actual code, data, resources, import/export tables, and other information.</li>
+    <li>Data Directories: Array of data directory entries that point to other structures (e.g., import/export tables, resource table, exception table).</li>
+    <li>Import/Export Tables: Lists of functions and variables imported from or exported to other modules.</li>
+    </ul>
+    <h4>Use Cases:</h4>
+    <ul>
+    <li>Used for all types of executables and libraries in Windows.</li>
+    <li>Supports advanced features like dynamic linking, structured exception handling, and resource management.</li>
+    </ul>
+    <h4>Key Differences</h4>
+    <ol>
+    <li>Compatibility:</li>
+    <ul>
+    <li>COFF: Primarily used in Unix and Unix-like systems.</li>
+    <li>PE: Specifically designed for Windows and includes additional structures for Windows-specific features.</li>
+    </ul>
+    <li>Headers:</li>
+    <ul>
+    <li>COFF: Has a simpler structure with a focus on object files.</li>
+    <li>PE: Includes a DOS header for backward compatibility, a rich PE header, and extensive optional headers for Windows-specific functionality.</li>
+    </ul>
+    <li>Data Directories:</li>
+    <ul>
+    <li>PE: Contains an array of data directories for additional features like import/export tables, resources, and debugging information, which are not present in standard COFF files.</li>
+    </ul>
+    <li>Sections:</li>
+    <ul>
+    <li>COFF: Sections are simpler and mainly focused on code and data.</li>
+    <li>PE: Sections include additional types like resources, relocation information, and debug data.</li>
+    </ul>
+    <li>Relocation and Linking:</li>
+    <ul>
+    <li>COFF: Focuses on modularity and linking multiple object files.</
+        <li>PE: Supports dynamic linking and includes complex relocation mechanisms for loaded modules.</li>
+    </ol>
+    <h4>Summary</h4>
+    <ul>
+    <li>COFF: A simpler, older format used mainly for object files in Unix systems. Focuses on modular programming and linking.</li>
+    <li>PE: An extension of COFF used in Windows. It includes additional headers and structures to support Windows-specific features like dynamic linking, structured exception handling, and resource management.</li>
+    </ul>
+    <h2>What is COFF(Common object file format) loader?</h2>
+    <p>The Common Object File Format (COFF) loader is a component in operating systems or development environments responsible for loading and executing object files that are in the COFF format.</p>
+    <h3>Key Functions of a COFF Loader</h3>
+    <ol>
+    <li><strong>Loading Executable Files:</strong> The COFF loader reads the COFF object files, which contain machine code, data, and metadata necessary for the execution of a program.</li>
+    <li><strong>Relocation:</strong> The COFF loader handles the relocation of addresses within the object file. Relocation is necessary because the object file might be loaded at a different memory address than originally expected.</li>
+    <li><strong>Symbol Resolution:</strong> The COFF loader resolves symbols, which are references to variables, functions, or other entities that are defined in other object files or libraries.</li>
+    <li><strong>Dynamic Linking:</strong> If the executable depends on shared libraries (dynamic link libraries or DLLs), the COFF loader will link these dynamically at runtime.</li>
+    <li><strong>Initialization and Execution:</strong> Once all the necessary linking and relocation are done, the COFF loader transfers control to the program’s entry point to begin execution.</li>
+    </ol>
+    <h3>Example of COFF Loader Usage</h3>
+    <p>When a program is compiled, it is converted into an object file in the COFF format. The following is a simplified example of how a COFF loader might process this file:</p>
+    <ol>
+    <li><strong>Read the COFF Header:</strong> The loader reads the header to understand the file's structure and metadata.</li>
+    <li><strong>Load Sections into Memory:</strong> The loader reads each section (e.g., code, data) and loads(maps) them into appropriate memory locations.</li>
+    <li><strong>Perform Relocation:</strong> If the object file has relocation entries, the loader adjusts addresses based on the actual load address.</li>
+    <li><strong>Resolve Symbols:</strong> The loader resolves any external symbols(functions) such as printf by linking with other object files or libraries.</li>
+    <li><strong>Transfer Control:</strong> The loader sets up the initial program stack and registers, then transfers control to the program’s entry point.</li>
+    </ol>
+    <h3>Blueprint</h3>
+    <p>In order to develop the COFF Loader, the following tasks must be tackled down:</p>
+    <ul>
+    <li>Parse the COFF file according to the COFF specification</li>
+    <li>Retrieve the COFF sections and map them in memory</li>
+    <li>Resolve symbols and modify the sections to set the right reference address in the sections</li>
+    <li>Resolve the external functions (such as printf) to set the right address in the sections</li>
+    <li>Retrieve the section containing the executable code</li>
+    <li>Run the code</li>
+    </ul>
+    <h2>COFF loader in depth</h2>
+    <ul>
+    <li>The COFF file is a book and is segmented in different sections. Among these sections there are the .text, .data, .rdata etc... with the same definition as those for the PE. However, the data contained in each section header is quite different. Moreover, other new parts are added.</li>
+    <li>The COFF specification for Object File contains a Symbol Table that summarizes all symbols used and a Symbol String Table that contains the name of each symbol.</li>
+    <li>Likewise, there is not any .reloc section in COFF file but there is a Relocation Table that contains all the information needed to resolve symbols, compute their address and modify the sections' code to fix symbols references.</li>
+    </ul>
+    <h3>COFF Header</h3>
+    <p>The COFF header specification can be found <a href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image">here</a> in the Microsoft documentation.</p>
+    <p>The file header starts at the offset 0. The following C structure can be used to handle the COFF header:</p>
+    <pre><code>typedef struct _CoffHeader {
+        uint16_t    machine;
+        uint16_t    numberOfSections;
+        uint32_t    timeDateStamp;
+        uint32_t    pointerToSymbolTable;
+        uint32_t    numberOfSymbols;
+        uint16_t    sizeOfOptionalHeader;
+        uint16_t    characteristics;
+    } CoffHeader;
+    </code></pre>
+    <p>The <code>machine</code> value is a number defining for which architecture the COFF file have been compiled. For example, the value <code>0x8664</code> represents an x64 architecture.</p>
+    <p>The value <code>pointerToSymbolTable</code> is the offset of the symbol table. Thus, the header can be used to directly jump to the Symbol Table:</p>
+    <pre><code>// pseudo code
+    // void *data : address of the first COFF byte
+    CoffSymbol* firstSymbol = data + coffHeader.pointerToSymbolTable;
+    </code></pre>
+    <p>The optional headers are empty on a File Object COFF structure.</p>
+    <p>The characteristic value represents the COFF type and its possible values are resumed in the Microsoft documentation
+        <a href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#characteristics">here</a>.</p>
+        <h3>Sections Header</h3>
+        <p>Right after the <strong>file header</strong>, there are the section headers. These headers contain all the information needed to access the data contained in the different sections. The specification about section headers can be found <a href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#section-table-section-headers">here</a> in the Microsoft documentation.</p>
+        <p>The following C structure can be used to handle the sections header:</p>
+        <pre><code>typedef struct _CoffSection {
+            char        name[8];
+            uint32_t    virtualSize;
+            uint32_t    virtualAddress;
+            uint32_t    sizeOfRawData;
+            uint32_t    pointerToRawData;
+            uint32_t    pointerToRelocations;
+            uint32_t    pointerToLinenumber;
+            uint16_t    numberOfRelocations;
+            uint16_t    numberOfLinenumber;
+            uint32_t    characteristics;
+        } CoffSection;
+        </code></pre>
+        <ul>
+        <li>The <code>name</code> value is the section name (.text, .data, etc...). Not so much to say about it.</li>
+        <li>The <code>virtualSize</code> and <code>virtualAddress</code> values are always set to <code>0</code> in COFF file as they are meant to contain the data once the PE is loaded in memory.</li>
+        <li>The <code>pointerToRawData</code> data is the <code>offset</code> used to access the data contained in the section. For example, <strong>if the section is the <code>.text</code> section, <code>pointerToRawData</code> data will point to the first executable bit.</strong> The value is absolute (i.e., from the byte 0 of the file) and not relative from the section (i.e., from the section address).</li>
+        <li>The <code>pointerToRelocations</code> data is the <code>offset</code> used to access the <code>Relocation Table</code> linked to the section (see the next part about relocation). As for the <strong><code>pointerToRawData</code>,</strong> the offset is absolute and not relative.</li>
+        <li>The <code>pointerToLinenumber</code> is usually 0 or can be ignored as this field is deprecated in COFF compilation.</li>
+        </ul>
+        <h3>Navigate into sections (.text, .bss, .data , etc)</h3>
+        <p>During the COFF file parsing, it will be needed to navigate through the different sections. This can easily be done by leveraging the following facts:</p>
+        <ul>
+        <li>The total number of sections is given in the file header</li>
+        <li>The first section header is located right after the file header</li>
+        <li>The size of the file and section headers are constant and known</li>
+        <li>The different section headers are stored in a continuous way</li>
+        <li>Thus, to access the section i the following pseudo-code can be used:</li>
+        </ul>
+        <pre><code>// pseudo code
+        // void *data : address of the first COFF byte
+        CoffSection* section_i = data + HEADER_SIZE + i * SECTION_SIZE
+        </code></pre>
+        <h3>Relocations Table</h3>
+        <p>This table contains all the information needed to resolve symbols and modify the segment code to inject the symbol address.</p>
+        <p>Once again, as an example, the following code is used:</p>
+        <pre><code>int main(void){
+            printf("Hello World !\n");
+        }
+        </code></pre>
+        <p>The decompiled code stored in the Object File .text section is the following:</p>
+        <pre><code>.text
+          000000000000001B: 48 8D 0D 00 00 00 00 lea         rcx,[??_C@_0M@KPLPPDAC@Hello?5World@]
+          0000000000000022: E8 00 00 00 00       call        __imp_printf
+        </code></pre>
+        <ul>
+        <li>The addresses contained in the section are <code>0x00000000</code>. If the .text section is loaded in memory as-is and run, the program will try to access to the address <code>0x00000000</code> and will crash.</li>
+        <li>Thus, a relocation must be performed to replace the fake symbol address by the real one.</li>
+        <li>On this example, two relocations must be performed : the <code>??_C@_0M@KPLPPDAC@Hello?5World@</code> and the <code>__imp_printf</code>.</li>
+        <li>Thus, two entries will be present in the .text section relocation table.</li>
+        </ul>
+        <p>The following C structure can be used to handle each relocation entry:</p>
+        <pre><code>typedef struct _CoffReloc {
+            uint32_t    virtualAddress;
+            uint32_t    symbolTableIndex;
+            uint16_t    type;
+        } CoffReloc;
+        </code></pre>
+        <ul>
+        <li>The <code>virtualAddress</code> value is the relative offset from the section start to the first byte of the address to modify.</li>
+        </ul>
+        <ul>
+            <li>If the .text section contains only these two lines :</li>
+            </ul>
+            <pre><code>  000000000000001B: 48 8D 0D 00 00 00 00 lea         rcx,[??_C@_0M@KPLPPDAC@Hello?5World@]
+              0000000000000022: E8 00 00 00 00       call        __imp_printf
+            </code></pre>
+            <ul>
+            <li>The virtual address for the relocations will be <code>0x03</code> and <code>0x08</code>.</li>
+            <li>The <code>symbolTableIndex</code> value contains the index of the symbol in the Symbol Table. This value is used to retrieve information about the symbol that must be relocated in the section.</li>
+            <li>The <code>type</code> value is the relocation type i.e; the way the symbol address must be given in the section. These codes are dependent on the architecture. Only the interesting codes for x64 will be explained.</li>
+            </ul>
+            <table>
+            <thead>
+            <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Description</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+            <td>IMAGE_REL_AMD64_ABSOLUTE</td>
+            <td>0x0000</td>
+            <td>The relocation is ignored</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_ADDR32</td>
+            <td>0x0001</td>
+            <td>The symbol reference address in the section must be replaced by the 64bits absolute address of the symbol.</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_ADDR64</td>
+            <td>0x0002</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits absolute address of the symbol.</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_ADDR32NB</td>
+            <td>0x0003</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits relative address of the symbol from the current section</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_REL32</td>
+            <td>0x0004</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits relative address of the symbol from the current section minus an offset of 0 bits</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_REL32_1</td>
+            <td>0x0005</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits relative address of the symbol from the current section minus an offset of 1 bits</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_REL32_2</td>
+            <td>0x0006</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits relative address of the symbol from the current section minus an offset of 2 bits</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_REL32_3</td>
+            <td>0x0007</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits relative address of the symbol from the current section minus an offset of 3 bits</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_REL32_4</td>
+            <td>0x0008</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits relative address of the symbol from the current section minus an offset of 4 bits</td>
+            </tr>
+            <tr>
+            <td>IMAGE_REL_AMD64_REL32_5</td>
+            <td>0x0009</td>
+            <td>The symbol reference address in the section must be replaced by the 32bits relative address of the symbol from the current section minus an offset of 5 bits</td>
+            </tr>
+            </tbody>
+            </table>
+            <p>Other relocation types exist and are referenced in the Microsoft documentation(<a href="https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#section-table-section-headers">https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#section-table-section-headers</a>) but they are hardly ever used or only for debugging purpose.</p>
+            <p>Thus only these relocation types will be handled here.</p>
+            <h3>Absolute and Relative address</h3>
+            <ul>
+            <li>THE symbol absolute address is its address from the file start. A symbol relative address is its address from a given position in the file (the relocation address for example).</li>
+            </ul>
+            <pre><code>// Compute the relative address of a symbol from a given section
+            RelativeAddress(Symbol) = AbsoluteAddress(Symbol) - AbsoluteAddress(Section)
+              </code></pre>
+            <ul>
+            <li><strong>Relative address is relative to the section address and Absolute address starts from the first address of COFF</strong></li>
+            <li>In the relocation description, the term absolute and relative address is used. Depending on the relocation type, one or the other must be computed.</li>
+            <li>This part aims to explain the difference between absolute and relative address.</li>
+            <li>The following example could help to see the difference between these two address types.</li>
+            </ul>
+            <h4>Example:</h4>
+<p>Michel TheHacker lives in a very small city with only one street. The street is one way and Michel lives in the 50th house.
+When he gives his address to a stranger, he always count the number of houses between his and the beginning of the street. His address is then 50. This is called absolute address.
+However, when he gives his address to one of his friends living in the same street, he always gives the number of houses between his house and his friend house. Thus, for Robert, a Michel friend, living in the house 12, Michel’s address is 38 as there are 38 houses between his and Michel one's. This is called relative address.
+Knowing that, when a relative address is needed, the following formula can be used to compute the symbol relative address of a symbol from a section start:</p>
+<pre><code>// Compute the relative address of a symbol from a given section
+RelativeAddress(Symbol) = AbsoluteAddress(Symbol) - AbsoluteAddress(Section)
+</code></pre>
+<p>The absolute address can be easily computed with the following formula:</p>
+<pre><code>AbsoluteAddress(Symbol) = AbsoluteAddress(SymbolTable) + Offset(Symbol in SymbolTable)
+</code></pre>
+<p>These addresses can then be written in the corresponding section.</p>
+<h3>Symbol Table</h3>
+<p>This table contains all the data related to the symbols. It includes their name, type and storage addresses. The following C structure can be used to handle each symbol entry:</p>
+<pre><code>typedef struct _CoffSymbol {
+    union {
+        char        name[8];
+        uint32_t    value[2];
+    } first;
+    uint32_t    value;
+    uint16_t    sectionNumber;
+    uint16_t    type;
+    uint8_t        storageClass;
+    uint8_t        numberOfAuxSymbols;
+} CoffSymbol;
+</code></pre>
+<p>- The first value is a union. It can handle two types of data depending on the symbol:
+  - The symbol name is fewer than 8 characters : the first.name value will contain the name of the symbol
+  - The symbol name is greater than 8 characters : the first.name[0] will be equal to 0 and the first.value will contains the offset of the symbol name in the Symbol Sting Table.</p>
+<p>- When the name is greater than 8 characters, the full-symbol name can be retrieved with the following code:</p>
+<pre><code>// pseudo code
+char *name = symbolStringTable + coffSymbol.first.value
+</code></pre>
+<p>- The <code>value</code> value is the symbol value. This entry can have different meanings depending on the symbol storage class.</p>
+<p>- The <code>sectionNumber</code> value is the section index where the symbol data is stored.</p>
+<p>- The <code>type</code> value is the type of the symbol ie the type of the value it represents. For example, it could be <code>DT_CHAR</code>, <code>DT_INT</code>, <code>DT_FUNCTION</code>. Usually, this field is not really used and is either DT_FUNCTION or 0.</p>
+<p>- The <code>storageClass</code> value represents how the data is actually stored in this symbol. The following table contains the main possible values and their specificities:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMAGE_SYM_CLASS_NULL</td>
+<td>0x0</td>
+<td>No storage type</td>
+</tr>
+<tr>
+<td>IMAGE_SYM_CLASS_NULL_AUTO</td>
+<td>0x01</td>
+<td>auto type. It is usually used for auto-allocated values stored in the stack</td>
+</tr>
+<tr>
+<td>IMAGE_SYM_CLASS_EXTERNAL</td>
+<td>0x02</td>
+<td>The symbol is defined in another COFF object. If the section number is 0, the symbol's value represent the symbol size, otherwise it represents the symbol offset within its section</td>
+</tr>
+<tr>
+<td>IMAGE_SYM_CLASS_STATIC</td>
+<td>0x03</td>
+<td>The symbol defined a static value. If the symbol's value is not 0, it represents the symbol offset within its section</td>
+</tr>
+</tbody>
+</table>
+<p>- Thus, if the symbol storage class is either <code>IMAGE_SYM_CLASS_STATIC</code> or <code>IMAGE_SYM_CLASS_EXTERNAL</code> with a non 0 section index, the symbol address can be computed as follows:</p>
+<pre><code>// pseudo code
+void *symbolAddress = sections[coffSymbol.sectionIndex].pointerToRawData + coffSymbol.value;
+</code></pre>
+<p>Finally, the numberOfAuxSymbols represents the number of auxiliary symbols that are contained right after the symbol record.
+These auxiliary symbols are usually linker specific and thus can be ignored for now as the COFFLoader does not link different object files to one another. They give additional information about the linked symbol. For example, in case of a symbol defining a function, the additional symbol can contain information about the total size of the function.
+This additional information is not really needed for the COFFLoader.</p>
+<h3>Symbol String Table</h3>
+<p>This table contains all the symbol names. The table is simply a concatenation of all the null-terminated strings containing the symbol names.</p>
+<p>It is preceded by a 4-byte length field. The length field contains the total number of bytes in the symbol string table, including the length field itself.</p>
+<pre><code>typedef struct _CoffSymbolStringTable {
+    uint32_t    length;
+    char        name[0];
+} CoffSymbolStringTable;
+</code></pre>
+<p>To get the name of a symbol, it is necessary to first get the offset of the symbol name in the symbol string table and then to retrieve the null-terminated string from this offset.</p>
+<p>The index of the symbol string table is the number of symbols in the symbol table multiplied by the size of the CoffSymbol structure. In other words, the size of the symbol table in the file must be known.</p>
+<p>With this information, the symbol name can be retrieved with the following code:</p>
+<pre><code>// pseudo code
+char *symbolName = symbolStringTable + offset;
+</code></pre>
+<h2>Code Example</h2>
+<p>A code example can be found in the GitHub repository <a href="https://github.com/bartsepet/COFFLoader">COFFLoader</a>.</p>
+<p>This loader is able to load a COFF file into memory.</p>
+<h2>License</h2>
+<p>This document is licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache 2.0 License</a>. You can obtain a copy of the license in the LICENSE file included in the repository.</p>
+
+                       

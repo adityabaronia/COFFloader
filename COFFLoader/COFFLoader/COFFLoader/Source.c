@@ -1,19 +1,21 @@
 #include <Windows.h>
 #include <stdio.h>
 
+#pragma pack(push, 1) // Set the alignment to 1 byte
+
 typedef struct{
 	UINT16 machine; //uint16_t
-	UINT8 numberOfSection; //uint16_t
+	UINT16 numberOfSection; //uint16_t
 	UINT32 timeStamp; //uint32_t
 	UINT32 filePtrSmblTbl; // file pointer to symbol table //uint32_t
-	UINT16 noOfSymbols; //uint16_t
+	UINT32 noOfSymbols; //uint16_t
 	UINT16 sizeOfOptionalHeader;  //uint16_t
 	UINT16 characteristics; //uint16_t
 }fileHeader;
 
 
 typedef struct {
-	char Name[8];
+	char	Name[8];
 	UINT32 VirtualSize;
 	UINT32 VirtualAddress;
 	UINT32 SizeOfRawData;
@@ -24,6 +26,19 @@ typedef struct {
 	UINT16 NumberOfLinenumbers;
 	UINT32 Characteristics;
 }sectionHeader;
+
+typedef struct{
+	union
+	{
+		char	Name[8];
+		UINT32	value[2]; // index 0 is zeros and index 1 is offset
+	}first;
+	UINT32 Value;
+	UINT16 SectionNumner;
+	UINT16 Type;
+	BYTE StorageClass;
+	BYTE NumberOfAuxSymbols;
+}symbolTable;
 
 void printFileHeader(fileHeader* fheader) {
 	printf("FILEHEADER:\n");
@@ -62,8 +77,12 @@ int main(int argc, char* argv[]) {
 	LPVOID objFileInMem = NULL;
 	LPDWORD bytesRead = NULL;
 	fileHeader* fheader;
-	//opening file hadle
+	sectionHeader* section_n;
+	symbolTable* sTable;
+	UINT64 symSrTableValueOffset = 0;
 	
+	
+
 	hFile = CreateFileA(argv[1],
 		GENERIC_READ, 
 		0, 
@@ -106,10 +125,37 @@ int main(int argc, char* argv[]) {
 	
 	
 	for (int i = 0; i < fheader->numberOfSection; i++) {
-		sectionHeader* section_n = (size_t)objFileInMem
+		section_n = (size_t)objFileInMem
 			+ (size_t)sizeof(fileHeader) +  i * (size_t)sizeof(sectionHeader);;
 		printf("SECTION HEADER: %x\n", i+1);
 		printSectionHeader(section_n);
 	}
+	
+	printf("size: %d\n", sizeof(symbolTable));
+	for (int i = 0; i < fheader->noOfSymbols; i++) {
+		sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
+		
+		if (!(sTable->first.value[0]))
+		{
+			symSrTableValueOffset = ((UINT64)objFileInMem + fheader->filePtrSmblTbl + sizeof(symbolTable) * fheader->noOfSymbols + sTable->first.value[1]);
+			printf("\n%d. Name: %s\n", i + 1, symSrTableValueOffset);
+			printf("string table offset: %d\n", sTable->first.value[1]);
+		}
+		else { printf("\n%d. Name: %s\n", i + 1, sTable->first.Name); }
+			
+		printf("value associated with symbol: 0x%x\n", sTable->Value);
+		printf("Section number 0x%x\n", sTable->SectionNumner);
+		printf("type is 0x%x\n", sTable->Type);
+		printf("StorageClass is 0x%x\n", sTable->StorageClass);
+		printf("Number of Aux symbols are 0x%x\n", sTable->NumberOfAuxSymbols);
+
+		if (sTable->first.Name[0] == '.') {
+			i++;
+			sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
+			printf("size of raw data of section: %x\n", sTable->first.value[0]);
+		}
+		
+	}
+	
 	return 0;
 }

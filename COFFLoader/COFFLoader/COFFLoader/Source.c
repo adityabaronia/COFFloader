@@ -3,6 +3,25 @@
 
 #pragma pack(push, 1) // Set the alignment to 1 byte
 
+// these are #defines for type of relocations
+#define IMAGE_REL_AMD64_ABSOLUTE  0x0000 // The relocation is ignored.
+#define IMAGE_REL_AMD64_ADDR64    0x0001 // The 64-bit VA of the relocation target.
+#define IMAGE_REL_AMD64_ADDR32    0x0002 // The 32-bit VA of the relocation target.
+#define IMAGE_REL_AMD64_ADDR32NB  0x0003 // The 32-bit address without an image base (RVA).
+#define IMAGE_REL_AMD64_REL32     0x0004 // The 32-bit relative address from the byte following the relocation.
+#define IMAGE_REL_AMD64_REL32_1   0x0005 // The 32-bit address relative to byte distance 1 from the relocation.
+#define IMAGE_REL_AMD64_REL32_2   0x0006 // The 32-bit address relative to byte distance 2 from the relocation.
+#define IMAGE_REL_AMD64_REL32_3   0x0007 // The 32-bit address relative to byte distance 3 from the relocation.
+#define IMAGE_REL_AMD64_REL32_4   0x0008 // The 32-bit address relative to byte distance 4 from the relocation.
+#define IMAGE_REL_AMD64_REL32_5   0x0009 // The 32-bit address relative to byte distance 5 from the relocation.
+#define IMAGE_REL_AMD64_SECTION   0x000A // The 16-bit section index of the section that contains the target. This is used to support debugging information.
+#define IMAGE_REL_AMD64_SECREL    0x000B // The 32-bit offset of the target from the beginning of its section. This is used to support debugging information and static thread local storage.
+#define IMAGE_REL_AMD64_SECREL7   0x000C // A 7-bit unsigned offset from the base of the section that contains the target.
+#define IMAGE_REL_AMD64_TOKEN     0x000D // CLR tokens.
+#define IMAGE_REL_AMD64_SREL32    0x000E // A 32-bit signed span-dependent value emitted into the object.
+#define IMAGE_REL_AMD64_PAIR      0x000F // A pair that must immediately follow every span-dependent value.
+#define IMAGE_REL_AMD64_SSPAN32   0x0010 // A 32-bit signed span-dependent value emitted into the object.
+
 
 // file header structure
 typedef struct {
@@ -52,6 +71,8 @@ typedef struct {
 
 }relocationTable;
 
+
+
 void printFileHeader(fileHeader* fheader) {
 	printf("FILEHEADER:\n");
 	printf("machine: 0x%x\n", fheader->machine);
@@ -94,7 +115,7 @@ int main(int argc, char* argv[]) {
 	symbolTable* sTable;
 	UINT64 symStrTableValueOffset = 0;
 	UINT16 totalRelocation = 0;
-
+	relocationTable* relocTable;
 
 	hFile = CreateFileA(argv[1],
 		GENERIC_READ,
@@ -133,10 +154,13 @@ int main(int argc, char* argv[]) {
 		exit(1);
 	}
 
+
+	printf("----------------------------FILE HEADER--------------------------\n");
+
 	fheader = (fileHeader*)objFileInMem;
 	printFileHeader(fheader);
 
-
+	printf("--------------------------SECTION HEADERS-------------------------\n");
 	for (int i = 0; i < fheader->numberOfSection; i++) {
 		section_n = (size_t)objFileInMem
 			+ (size_t)sizeof(fileHeader) + i * (size_t)sizeof(sectionHeader);;
@@ -144,11 +168,22 @@ int main(int argc, char* argv[]) {
 		totalRelocation += section_n->NumberOfRelocations;
 		printSectionHeader(section_n);
 	}
-	printf("total number of reloation : %d\n", totalRelocation);
+	printf("total number of reloationa are : %d\n", totalRelocation);
+
+	printf("-----------------------SYMBOL TABLE CONTENT-----------------------\n");
 
 	for (int i = 0; i < fheader->noOfSymbols; i++) {
 		sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
 		
+		if (/*sTable->Value == 0 && sTable->first.value[0] && sTable->first.value[0]*/sTable->first.Name[0] == '.') {
+			printf("\n%x. Name: %s\n", i , sTable->first.Name);
+			i++;
+			sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
+			printf("size of raw data of section: %x\n", sTable->first.value[0]);
+			continue;
+		}
+
+
 		if (!(sTable->first.value[0]))
 		{
 			// Symbol string is more that 8 bytes; we are finding string in symbol string table. relocation 
@@ -158,10 +193,10 @@ int main(int argc, char* argv[]) {
 				sizeof(symbolTable) * fheader->noOfSymbols + 
 				sTable->first.value[1]);
 
-			printf("\n%x. Name: %s\n", i + 1, symStrTableValueOffset);
+			printf("\n%x. Name: %s\n", i , symStrTableValueOffset);
 			printf("string table offset: %d\n", sTable->first.value[1]);
 		}
-		else { printf("\n%x. Name: %s\n", i + 1, sTable->first.Name); }
+		else { printf("\n%x. Name: %s\n", i , sTable->first.Name); }
 
 		printf("value associated with symbol: 0x%x\n", sTable->Value);
 		printf("Section number 0x%x\n", sTable->SectionNumner);
@@ -169,12 +204,61 @@ int main(int argc, char* argv[]) {
 		printf("StorageClass is 0x%x\n", sTable->StorageClass);
 		printf("Number of Aux symbols are 0x%x\n", sTable->NumberOfAuxSymbols);
 
-		if (sTable->first.Name[0] == '.') {
-			i++;
-			sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
-			printf("size of raw data of section: %x\n", sTable->first.value[0]);
-		}
+		
 
+	}
+
+
+	printf("\n-----------------------------RELOCATION DATA----------------------------------\n");
+
+
+	//// looking into relocation data
+	section_n = 0;
+	sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl;
+	for (UINT32 i = 0; i < fheader->numberOfSection; i++) {
+		section_n = (size_t)objFileInMem
+			+ (size_t)sizeof(fileHeader) 
+			+ i * (size_t)sizeof(sectionHeader);;
+
+		printf("\n%d SECTION HEADER: %s\n", i + 1, section_n->Name);
+		printf("Number of relocation in section: 0x%x\n", section_n->NumberOfRelocations);
+		
+		for (UINT32 j = 0; j < section_n->NumberOfRelocations; j++) {
+			relocTable = (size_t)objFileInMem + section_n->PointerToRelocations + j * sizeof(relocationTable);
+
+			printf("Symbol table index, address that is to be used for reloc: 0x%x\n", relocTable->SymbolTableIndex);
+
+			if(!sTable[relocTable->SymbolTableIndex].first.value[0]){
+				
+				printf("offset: %d\n", sTable[relocTable->SymbolTableIndex].first.value[1]);
+				symStrTableValueOffset = ((UINT64)objFileInMem +
+					fheader->filePtrSmblTbl +
+					sizeof(symbolTable) * fheader->noOfSymbols + 
+					sTable[relocTable->SymbolTableIndex].first.value[1]);
+					
+				printf("\nSymbol name: %s\n", symStrTableValueOffset);
+			}
+			else { printf("\nSymbol name: %s\n", sTable[relocTable->SymbolTableIndex].first.Name); }
+
+			printf("Symbol table index, address that is to be used for reloc: 0x%x\n", relocTable->SymbolTableIndex); // SymbolTableIndex is 0 based
+			printf("Address\offset of item to which reloc is appiled: 0x%x\n", relocTable->VirtualAddress);
+			printf("Type of reloc 0x%x\n", relocTable->Type);
+			
+
+
+			/* Type == 1 relocation is the 64-bit VA of the relocation target IMAGE_REL_AMD64_ADDR64*/
+			if (relocTable->Type == 1) {
+
+			}
+
+			/* This is Type == 3 relocation code */
+			/* This is Type == 4 relocation code, needed to make global variables to work correctly */
+
+			/* This is Type == IMAGE_REL_I386_DIR32 relocation code */
+
+
+		}
+		
 	}
 
 	return 0;

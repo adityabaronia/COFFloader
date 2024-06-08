@@ -415,6 +415,33 @@ This additional information is not really needed for the COFFLoader.
 
 
 
+## COFF relocation
+- Object file contain relocation COFF relocations, which **specify how the section data should be modified** when placed in the image file and subsequently loaded into memory.
+- Image file(PE/EXE) do not contain COFF relocations, because all referenced symbols hahve already been assigned address in a flat address space.
+- An image contains relocation in the form of base relocation (.reloc) section.
+- **For each section in object file, an array of fixed-length records holds the section's COFF relocations**
+- The position and length of the array are specified in the section header.
+
+| Offset | Size | Field            | Description |
+|--------|------|------------------|-------------|
+| 0      | 4    | VirtualAddress   | The address of the item to which relocation is applied. This is the offset from the beginning of the section, plus the value of the section's RVA/Offset field. See Section Table (Section Headers). For example, if the first byte of the section has an address of 0x10, the third byte has an address of 0x12. |
+| 4      | 4    | SymbolTableIndex | A zero-based index into the symbol table. This symbol gives the address that is to be used for the relocation. If the specified symbol has section storage class, then the symbol's address is the address with the first section of the same name.                                                           |
+| 8      | 2    | Type             | A value that indicates the kind of relocation that should be performed. Valid relocation types depend on machine type. See Type Indicators.  |
+
+
+- if the symbol referred to by the SymbolTableIndex field has the storage class ```IMAGE_SYM_CLASS_SECTION```, the symbol's address is the beginning of the section. The section is usually in the same file, except when the object file is part of an archive(library)
+
+
+
+
+
+
+
+
+
+
+
+
 ## Reference
 1. CHATGPT
 2. https://otterhacker.github.io/Malware/CoffLoader.html#hands-on--coff-loader

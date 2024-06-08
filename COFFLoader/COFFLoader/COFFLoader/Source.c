@@ -3,7 +3,9 @@
 
 #pragma pack(push, 1) // Set the alignment to 1 byte
 
-typedef struct{
+
+// file header structure
+typedef struct {
 	UINT16 machine; //uint16_t
 	UINT16 numberOfSection; //uint16_t
 	UINT32 timeStamp; //uint32_t
@@ -13,7 +15,7 @@ typedef struct{
 	UINT16 characteristics; //uint16_t
 }fileHeader;
 
-
+// Section header structure
 typedef struct {
 	char	Name[8];
 	UINT32 VirtualSize;
@@ -27,7 +29,9 @@ typedef struct {
 	UINT32 Characteristics;
 }sectionHeader;
 
-typedef struct{
+
+// Symbol table structure
+typedef struct {
 	union
 	{
 		char	Name[8];
@@ -39,6 +43,14 @@ typedef struct{
 	BYTE StorageClass;
 	BYTE NumberOfAuxSymbols;
 }symbolTable;
+
+
+typedef struct {
+	UINT32 VirtualAddress;
+	UINT32 SymbolTableIndex;
+	UINT16 Type;
+
+}relocationTable;
 
 void printFileHeader(fileHeader* fheader) {
 	printf("FILEHEADER:\n");
@@ -71,7 +83,8 @@ int main(int argc, char* argv[]) {
 		printf("Usage: COFFloader.exe <path\\of\\obj\\file.obj>\n");
 		exit(1);
 	}
-		printf("File to parse: %s\n\n", argv[1]);
+	printf("File to parse: %s\n\n", argv[1]);
+
 	HANDLE hFile = NULL;
 	size_t objFileSize = 0;
 	LPVOID objFileInMem = NULL;
@@ -79,15 +92,15 @@ int main(int argc, char* argv[]) {
 	fileHeader* fheader;
 	sectionHeader* section_n;
 	symbolTable* sTable;
-	UINT64 symSrTableValueOffset = 0;
-	
-	
+	UINT64 symStrTableValueOffset = 0;
+	UINT16 totalRelocation = 0;
+
 
 	hFile = CreateFileA(argv[1],
-		GENERIC_READ, 
-		0, 
-		NULL, 
-		OPEN_ALWAYS, 
+		GENERIC_READ,
+		0,
+		NULL,
+		OPEN_ALWAYS,
 		FILE_ATTRIBUTE_NORMAL,
 		NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
@@ -103,8 +116,8 @@ int main(int argc, char* argv[]) {
 
 	//Allocating virtual memory
 	objFileInMem = VirtualAlloc(NULL,
-		objFileSize, 
-		MEM_COMMIT | MEM_RESERVE, 
+		objFileSize,
+		MEM_COMMIT | MEM_RESERVE,
 		PAGE_READWRITE);
 
 	if (objFileInMem == NULL) {
@@ -119,30 +132,37 @@ int main(int argc, char* argv[]) {
 		printf("Bytes read is %ulld .Error in reading complete file\n", bytesRead);
 		exit(1);
 	}
-	
+
 	fheader = (fileHeader*)objFileInMem;
 	printFileHeader(fheader);
-	
-	
+
+
 	for (int i = 0; i < fheader->numberOfSection; i++) {
 		section_n = (size_t)objFileInMem
-			+ (size_t)sizeof(fileHeader) +  i * (size_t)sizeof(sectionHeader);;
-		printf("SECTION HEADER: %x\n", i+1);
+			+ (size_t)sizeof(fileHeader) + i * (size_t)sizeof(sectionHeader);;
+		printf("SECTION HEADER: %x\n", i + 1);
+		totalRelocation += section_n->NumberOfRelocations;
 		printSectionHeader(section_n);
 	}
-	
-	printf("size: %d\n", sizeof(symbolTable));
+	printf("total number of reloation : %d\n", totalRelocation);
+
 	for (int i = 0; i < fheader->noOfSymbols; i++) {
 		sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
 		
 		if (!(sTable->first.value[0]))
 		{
-			symSrTableValueOffset = ((UINT64)objFileInMem + fheader->filePtrSmblTbl + sizeof(symbolTable) * fheader->noOfSymbols + sTable->first.value[1]);
-			printf("\n%d. Name: %s\n", i + 1, symSrTableValueOffset);
+			// Symbol string is more that 8 bytes; we are finding string in symbol string table. relocation 
+			// just after end of symboltable. We are adding offset of string location.
+			symStrTableValueOffset = ((UINT64)objFileInMem + 
+				fheader->filePtrSmblTbl + 
+				sizeof(symbolTable) * fheader->noOfSymbols + 
+				sTable->first.value[1]);
+
+			printf("\n%x. Name: %s\n", i + 1, symStrTableValueOffset);
 			printf("string table offset: %d\n", sTable->first.value[1]);
 		}
-		else { printf("\n%d. Name: %s\n", i + 1, sTable->first.Name); }
-			
+		else { printf("\n%x. Name: %s\n", i + 1, sTable->first.Name); }
+
 		printf("value associated with symbol: 0x%x\n", sTable->Value);
 		printf("Section number 0x%x\n", sTable->SectionNumner);
 		printf("type is 0x%x\n", sTable->Type);
@@ -154,8 +174,8 @@ int main(int argc, char* argv[]) {
 			sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
 			printf("size of raw data of section: %x\n", sTable->first.value[0]);
 		}
-		
+
 	}
-	
+
 	return 0;
 }

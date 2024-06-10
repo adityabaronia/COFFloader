@@ -446,3 +446,4 @@ This additional information is not really needed for the COFFLoader.
 1. CHATGPT
 2. https://otterhacker.github.io/Malware/CoffLoader.html#hands-on--coff-loader
 3. COFF header specification in MSDN https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#coff-file-header-object-and-image
+4. https://0xpat.github.io/Malware_development_part_8/ (better for leraning parsing)

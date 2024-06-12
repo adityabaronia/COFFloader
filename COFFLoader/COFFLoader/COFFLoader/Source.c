@@ -117,7 +117,8 @@ int main(int argc, char* argv[]) {
 	UINT16 totalRelocation = 0;
 	relocationTable* relocTable;
 	char** sectionMapping = NULL;
-	UINT64 symOffset;
+	UINT64 symOffsetUsed;
+	UINT64 symOffsetDef;
 
 	hFile = CreateFileA(argv[1],
 		GENERIC_READ,
@@ -196,7 +197,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < fheader->noOfSymbols; i++) {
 		sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
 
-		if (/*sTable->Value == 0 && sTable->first.value[0] && sTable->first.value[0]*/sTable->first.Name[0] == '.') {
+		if (sTable->first.Name[0] == '.') {
 			printf("\n%x. Name: %s\n", i, sTable->first.Name);
 			i++;
 			sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl + i * sizeof(symbolTable);
@@ -269,6 +270,10 @@ int main(int argc, char* argv[]) {
 			printf("\nRelocation number: % d\n", j + 1);
 			printf("Symbol table index, address that is to be used for reloc: 0x%x\n", relocTable->SymbolTableIndex);
 
+			
+
+
+
 			if (!sTable[relocTable->SymbolTableIndex].first.value[0]) {
 
 				printf("offset: %d\n", sTable[relocTable->SymbolTableIndex].first.value[1]);
@@ -290,24 +295,52 @@ int main(int argc, char* argv[]) {
 			/* Type == 1 relocation is the 64-bit VA of the relocation target IMAGE_REL_AMD64_ADDR64*/
 			if (relocTable->Type == 1) {
 				printf("The 64-bit VA of the relocation target.\n");
-				symOffset = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
+				symOffsetUsed = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
 				relocTable->VirtualAddress;/*This virtual address is offset from the section where symbol is used*/
-				printf("symbol address from the newly allocated section: %x", symOffset);
+				printf("symbol address from the newly allocated section: %x\n", symOffsetUsed);
 			}
+
+
+
 			else if (relocTable->Type == 2) { printf("The 32-bit VA of the relocation target.\n"); }
+
+
 			else if (relocTable->Type == 3) { 
 				printf("The 32-bit address without an image base (RVA).\n"); 
-				symOffset = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
+				symOffsetUsed = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
 					relocTable->VirtualAddress;/*This virtual address is offset from the section where symbol is used*/
-				printf("symbol address from the newly allocated section: %x", symOffset);
+				printf("symbol address from the newly allocated section: %x\n", symOffsetUsed);
 			}
+
+
+
 			else if (relocTable->Type == 4) { 
+				// relocation table will hold the details of symbol where it is used.
+				// but symbol table will hold the details of where details of the symbol is stored.
+				// For ex.  there is a symbol for string "hello world" that is used in assembly. The assembly is present in .txt section
+				// where as the "hello world" will be present in .data section.
+				// so, symbol table will hold the info of .data where as relocation table will hold the info of .text
 				printf("The 32-bit relative address from the byte following the relocation. needed to make global variables to work correctly\n");
-				symOffset = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
+				symOffsetUsed = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
 					relocTable->VirtualAddress;/*This virtual address is offset from the section where symbol is used*/
-				printf("symbol address from the newly allocated section: %x", symOffset);
+				printf("symbol address from the newly allocated section: %x\n", symOffsetUsed);
+				printf("section number: %d\n", sTable[relocTable->SymbolTableIndex].SectionNumber);
+				symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value ;
+				symOffsetDef -= (symOffsetUsed + 4);
+				if(sTable[relocTable->SymbolTableIndex].StorageClass == 3){ printf("probably static data: %x \n", symOffsetDef); }
+				
+				memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
+				
+				printf("Storage class of Symbol: 0x%x. \n", sTable[relocTable->SymbolTableIndex].StorageClass);
+				printf("Type of symbol: 0x%x\n", sTable[relocTable->SymbolTableIndex].Type);
+				if (sTable[relocTable->SymbolTableIndex].SectionNumber == 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2) { printf("THIS IS EXTERNAL FUNCTION HAS TO BE DYNAMICALLY LINKED\n"); }
+				else if (sTable[relocTable->SymbolTableIndex].SectionNumber != 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2 && sTable[relocTable->SymbolTableIndex].Type == 0x20) {
+					printf("This type of symbols are functions as of now and are located in same section means .text section\n");
+				}
+				
+				
 			}
-			else if (relocTable->Type == 5) { printf("The 32-bit address relative to byte distance 1 from the relocation.\n"); }
+			/*else if (relocTable->Type == 5) { printf("The 32-bit address relative to byte distance 1 from the relocation.\n"); }
 			else if (relocTable->Type == 6) { printf("The 32-bit address relative to byte distance 2 from the relocation.\n"); }
 			else if (relocTable->Type == 7) { printf("The 32-bit address relative to byte distance 3 from the relocation.\n"); }
 			else if (relocTable->Type == 8) { printf("The 32-bit address relative to byte distance 4 from the relocation.\n"); }
@@ -319,11 +352,11 @@ int main(int argc, char* argv[]) {
 			else if (relocTable->Type == 14) { printf("A 32-bit signed span-dependent value emitted into the object.\n"); }
 			else if (relocTable->Type == 15) { printf("A pair that must immediately follow every span-dependent value.\n"); }
 			else if (relocTable->Type == 16) { printf("A 32-bit signed span-dependent value that is applied at link time.\n"); }
-			/* This is Type == 3 relocation code */
+			*//* This is Type == 3 relocation code */
 			/* This is Type == 4 relocation code, needed to make global variables to work correctly */
 
 			/* This is Type == IMAGE_REL_I386_DIR32 relocation code */
-
+			else continue;
 
 		}
 

@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <Windows.h>
 #include <stdio.h>
 
@@ -99,6 +100,37 @@ void printSectionHeader(sectionHeader* section_n) {
 	printf("\n");
 }
 
+
+void* functionFinder(char* functionSymbol) {
+	//printf("function finder at work\n");
+	if (memcmp(functionSymbol, "__imp_", 6) == 0) {
+		printf("Function needs to be imported\n");
+
+		if (memcmp(functionSymbol, "__imp_GetProcAddress", 20) == 0) {
+			printf("Asking for GetProcAddress\n");
+			return GetProcAddress;
+		}
+		if (memcmp(functionSymbol, "__imp_GetModuleHandleA", 22) == 0) {
+			printf("Asking for GetModuleHandleA\n");
+			return GetModuleHandleA;
+		}
+		if (memcmp(functionSymbol, "__imp_LoadLibraryA", 18) == 0) {
+			printf("Asking for LoadLibraryA\n");
+			printf("loadlibraryA: %x\n", LoadLibraryA);
+			return LoadLibraryA;
+		}
+		if (memcmp(functionSymbol, "__imp_FreeLibrary", 17) == 0) {
+			printf("Asking for FreeLibrary\n");
+			return FreeLibrary;
+		}
+		 printf("Will find functions in Windows DLLs\n"); 
+		return NULL;
+		
+	
+	}
+
+}
+
 int main(int argc, char* argv[]) {
 	if (argc == 1) {
 		printf("Usage: COFFloader.exe <path\\of\\obj\\file.obj>\n");
@@ -119,6 +151,10 @@ int main(int argc, char* argv[]) {
 	char** sectionMapping = NULL;
 	UINT64 symOffsetUsed;
 	UINT64 symOffsetDef;
+	void* functionAddr = 0;
+	char* functionSymbolName = NULL;
+
+
 
 	hFile = CreateFileA(argv[1],
 		GENERIC_READ,
@@ -281,10 +317,15 @@ int main(int argc, char* argv[]) {
 					fheader->filePtrSmblTbl +
 					sizeof(symbolTable) * fheader->noOfSymbols +
 					sTable[relocTable->SymbolTableIndex].first.value[1]);
-
+				functionSymbolName = symStrTableValueOffset;
+				
 				printf("Symbol name: %s\n", symStrTableValueOffset);
 			}
-			else { printf("Symbol name: %s\n", sTable[relocTable->SymbolTableIndex].first.Name); }
+			else { 
+				printf("Symbol name: %s\n", sTable[relocTable->SymbolTableIndex].first.Name);
+				functionSymbolName = sTable[relocTable->SymbolTableIndex].first.Name;
+				
+			}
 
 			printf("Symbol table index, address that is to be used for reloc: 0x%x\n", relocTable->SymbolTableIndex); // SymbolTableIndex is 0 based
 			printf("Address\offset of item to which reloc is appiled: 0x%x\n", relocTable->VirtualAddress);
@@ -326,6 +367,7 @@ int main(int argc, char* argv[]) {
 				printf("symbol address from the newly allocated section: %x\n", symOffsetUsed);
 				printf("section number: %d\n", sTable[relocTable->SymbolTableIndex].SectionNumber);
 				symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value ;
+				printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
 				symOffsetDef -= (symOffsetUsed + 4);
 				if(sTable[relocTable->SymbolTableIndex].StorageClass == 3){ printf("probably static data: %x \n", symOffsetDef); }
 				
@@ -333,7 +375,11 @@ int main(int argc, char* argv[]) {
 				
 				printf("Storage class of Symbol: 0x%x. \n", sTable[relocTable->SymbolTableIndex].StorageClass);
 				printf("Type of symbol: 0x%x\n", sTable[relocTable->SymbolTableIndex].Type);
-				if (sTable[relocTable->SymbolTableIndex].SectionNumber == 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2) { printf("THIS IS EXTERNAL FUNCTION HAS TO BE DYNAMICALLY LINKED\n"); }
+				if (sTable[relocTable->SymbolTableIndex].SectionNumber == 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2) { 
+					printf("THIS IS EXTERNAL FUNCTION HAS TO BE DYNAMICALLY LINKED\n");
+					functionAddr = functionFinder(functionSymbolName);
+					printf("Actual memory address of the function used in symbol: 0x%x\n", functionAddr);
+				}
 				else if (sTable[relocTable->SymbolTableIndex].SectionNumber != 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2 && sTable[relocTable->SymbolTableIndex].Type == 0x20) {
 					printf("This type of symbols are functions as of now and are located in same section means .text section\n");
 				}

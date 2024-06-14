@@ -301,7 +301,7 @@ typedef struct {
 	UINT16 NumberOfLinenumbers;
 	UINT32 Characteristics;
 }sectionHeader;
-``
+```
 ## COFF symbol table and its structure
 
 | Offset | Size | Field               | Description                                                                                                                                                                                                                                           |

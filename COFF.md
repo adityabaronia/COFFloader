@@ -6,14 +6,14 @@
 
 
 void example(){
-	MessageBox(NULL, "lodu", "ludo",0);
+	MessageBox(NULL, "HI", "from example",0);
 	LoadLibraryA("kernel32.exe");
 
 }
 
 int GO(){
 	
-	MessageBox(NULL, "ludo", "lodu",0);
+	MessageBox(NULL, "HI", "from GO",0);
 	example();
     CreateFileA("C:\\Users\\Public\\merabaapcoff.txt",
 		GENERIC_READ,
@@ -28,7 +28,7 @@ int GO(){
 
 # Compilation
 ```bash
-cl.exe \c CreateFile.c
+cl.exe /MT /c CreateFile.c
 ```
 
 # COFF Header
@@ -390,12 +390,12 @@ typedef struct {
 		}
    	 ```
 - Next in line is Symbol table. ``Total numbers of symbols`` and ``pointer to symbol table`` in COFF can be found in ``file header``.
-- Symbol table will have information of all the symbols. For example: ``MessageBox(NULL, "lodu", "ludo",0);`` MessageBox function uses 2 strings. These strings are used in .text section but these strings are stored in .data section(can be find after iterating symbol table). Assembly of this MessageBox function will look like:
+- Symbol table will have information of all the symbols. For example: ``MessageBox(NULL, "HI", "From example",0);`` MessageBox function uses 2 strings. These strings are used in .text section but these strings are stored in .data section(can be find after iterating symbol table). Assembly of this MessageBox function will look like:
 	- ```asm
    	 		  45 33 C9           xor         r9d,r9d
-			  0000000000000007: 4C 8D 05 00 00 00  lea         r8,[$SG74579] // lodu
+			  0000000000000007: 4C 8D 05 00 00 00  lea         r8,[$SG74579] // "HI"
 			                    00
-			  000000000000000E: 48 8D 15 00 00 00  lea         rdx,[$SG74580] // ludo
+			  000000000000000E: 48 8D 15 00 00 00  lea         rdx,[$SG74580] // "From example"
 			                    00
 			  0000000000000015: 33 C9              xor         ecx,ecx
 			  0000000000000017: FF 15 00 00 00 00  call        qword ptr [__imp_MessageBoxA]```

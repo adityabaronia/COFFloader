@@ -399,11 +399,11 @@ typedef struct {
 			                    00
 			  0000000000000015: 33 C9              xor         ecx,ecx
 			  0000000000000017: FF 15 00 00 00 00  call        qword ptr [__imp_MessageBoxA]```
-   	- So the symbol table will store the information about ``$SG74579``, ``$SG74580``. This information will be section number where the associated string for each symbol is stored. (Here we are taking only about strings that is why .data section is used. If there is any user defined function in symbol table then its associated data is also present here)
-   	- Now it can be said that symbol ``$SG74579``, ``$SG74580`` or ``example`` is defined somewhere and is used somewhere else. **Symbol table will about where the symbol is defined**
+   	- So the symbol table will store the information about ``$SG74579``, ``$SG74580``. This information will be a section number where the associated string for each symbol is stored. (Here we are talking only about strings that is why .data section is used. If there is any user-defined function in symbol table then its associated data is also present here)
+   	- Now it can be said that symbol ``$SG74579``, ``$SG74580`` or ``example`` is defined somewhere and is used somewhere else. **Symbol table will be about where the symbol is defined**
    
-	- Each symbol is stored in symbol pointer table, this means each symbol table will have a fixed size. Also total number of symbol tables will be equal to total number of symbols.
-   	- 1st symbol can be found at the pointer to symbol table but to find the next symbol table:
+	- Each symbol is stored in symbol pointer table, this means each symbol table will have a fixed size. Also total number of symbol tables will be equal to the total number of symbols.
+   	- The 1st symbol can be found at the pointer to symbol table but to find the next symbol table:
    		-  ```c
 			symbolTable* sTable;
 	   	    	sTable = (UINT64)objFileInMem + fheader->pointerToSymbolTable + i * sizeof(symbolTable); // here i is number of symbol pointer whose info is required
@@ -416,7 +416,7 @@ typedef struct {
 		sTable = (UINT64)objFileInMem + fheader->pointerToSymbolTable + i * sizeof(symbolTable);
   	  	if (!(sTable->first.value[0]))
 		{
-			// Symbol string is more that 8 bytes; finding string in symbol string table.  
+			// Symbol string is more that 8 bytes; finding the string in symbol string table.  
 			// just after end of symbol table. adding offset of string location.
 			symStrTableValueOffset = ((UINT64)objFileInMem + fheader->pointerToSymbolTable + sizeof(symbolTable) * fheader->noOfSymbols + sTable->first.value[1]);
 			functionName = symStrTableValueOffset;
@@ -426,7 +426,7 @@ typedef struct {
 		}
   	  ```
 	- Other interesting member of ``symbolTable`` structures are ``Value``, ``SectionNumber``, ``Type``, ``StorageClass``. Information about these members can be found at ``https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#coff-symbol-table``
- 	- At the end COFF loader is required to execute the entry point function of object file. This entry point function and other locally defined function can be found with this:
+ 	- At the end, the COFF loader is required to execute the entry point function of the object file. This entry point function and other locally defined functions can be found with this:
   		- ```c
 			if (sTable->StorageClass == 2 && sTable->SectionNumber != 0) {
 				printf("internal function\n");
@@ -435,17 +435,17 @@ typedef struct {
 				}
 			}
        		```
-        - All the external functions(WINAPIs) can be found with this condition. It is required to note the ``total number of external functions`` used in object file.
+        - All the external functions(WINAPIs) can be found with this condition. It is required to note the ``total number of external functions and other external symbols`` used in the object file.
         	- ```c
 				if (sTable->StorageClass == 2 && sTable->SectionNumber == 0) {
 					printf("A value that Microsoft tools use for external symbols\n");
 					externalFuncCount += 1;
 				}
           		 ```     
-- One of the important table in COFF is ``relocation table``. While interating through the relcoation table all the symbols required by COFF loader to execute object file will be resolved and the reference will be applied.
-- As discussed while parsing symbol table, symbols are defined somewhere but used somewhere else(mostly test section). **relocation table will tell about where the symbol is used**.
-- Reference to all the imported function are required to make a successful COFF loader. To this a seperate GOT(Global offset table) is required, where address of all the imported functions(exteernal function) will be saved. To do this again a pointer to pointers valrialbe is required or say an array that can store addresses ``got = calloc(externalFuncCount, 8);``.
-- Each section will have some relocation. To find the relocation in each e\section again in\terate through each section and find number of relocation in it, Then iterate through those relocations.
+- One important table in COFF is the ``relocation table``. While iterating through the relocation table all the symbols required by COFF loader to execute the object file will be resolved and the reference will be applied.
+- As discussed while parsing the symbol table, symbols are defined somewhere but used somewhere else(mostly test section). **The relocation table will tell about where the symbol is used**.
+- Reference to all the imported functions is required to make a successful COFF loader. To do this, a separate GOT(Global offset table) is required, where the address of all the imported functions(external function) will be saved. To do this again a pointer to pointers variable is required or say an array that can store addresses ``got = calloc(externalFuncCount, 8);``.
+- Each section will have some relocation. To find the relocation in each section again iterate through each section and find number of relocation in it, Then iterate through those relocations.
 	- ```c
 			for (UINT32 i = 0; i < fheader->numberOfSection; i++) {
    				section_n = (size_t)objFileInMem + (size_t)sizeof(fileHeader) + i * (size_t)sizeof(sectionHeader);
@@ -454,8 +454,8 @@ typedef struct {
   				}
   			}
   		 ```
-   	- This is for parsing through relocation table
-- To resolve all the relocation sybol table is also required. Both of the table will provide the data required to resolve the relocations. **relocation table will provide information where the symbols are used** and **symbol table will provide where the symbols are defined**.
+   	- This is for parsing through the relocation table
+- To resolve all the symbols,  relocation table, and symbol table are required. Both of the tables will provide the data required to resolve the relocations. **relocation table will provide information where the symbols are used** and **symbol table will provide where the symbols are defined**.
 - The code for resolving relocation will look like:
 	- ```c
 		   section_n = 0;
@@ -511,15 +511,15 @@ typedef struct {
 				}
 		
 				else if (relocTable->Type == 4) { 
-					// relocation table will hold the details of symbol where it is used.
-					// but symbol table will hold the details of where details of the symbol is stored.
+					// relocation table will hold the details of the symbol where it is used.
+					// but the symbol table will hold the details of where details of the symbols is stored.
 					// For ex.  there is a symbol for string "hello world" that is used in assembly. The assembly is present in .txt section
-					// where as the "hello world" will be present in .data section.
-					// so, symbol table will hold the info of .data where as relocation table will hold the info of .text
+					//whereas the "hello world" will be present in .data section.
+					// so, the symbol table will hold the info of .data whereas relocation table will hold the info of .text
 					printf("The 32-bit relative address from the byte following the relocation. needed to make global variables to work correctly\n");
 					
 					symOffsetUsed = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
-						relocTable->VirtualAddress;/*This virtual address is offset from the section where symbol is used*/
+						relocTable->VirtualAddress;/*This virtual address is offset from the section where the symbol is used*/
 					
 					printf("symbol address from the newly allocated section: %x\n", symOffsetUsed);
 					printf("section number: %d\n", sTable[relocTable->SymbolTableIndex].SectionNumber);
@@ -542,7 +542,7 @@ typedef struct {
 						gotIndex += 1;
 					}
 		
-		  			// This type of symbols are functions as of now and are located in same section means .text section
+		  			// This type of symbol are functions as of now and is located in the same section means .text section
 					else if (sTable[relocTable->SymbolTableIndex].SectionNumber != 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2 && sTable[relocTable->SymbolTableIndex].Type == 0x20) {
 						printf("This type of symbols are functions as of now and are located in same section means .text section\n");
 						symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
@@ -551,7 +551,7 @@ typedef struct {
 						memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
 					}
 		
-		  			// These are generally variables that are locally defined. I have not yet worked for global variable and many other thing. 
+		  			// These are generally variables that are locally defined. I have not yet worked for global variables and many other things. 
 					else if (sTable[relocTable->SymbolTableIndex].StorageClass == 3) {
 						symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
 						printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
@@ -580,7 +580,7 @@ typedef struct {
    		}
    		```
 
-- Once done with relocation, find the address of function to be executed. For this starting address of newly allocated .text is saved in a variable and also the offset of the function to execute is also stored in a variable(while parsing symbol table).
+- Once done with relocation, find the address of the function to be executed. For this, the starting address of the newly allocated .text is saved in a variable and also the offset of the function to execute is stored in a variable(while parsing the symbol table).
 	- ```c
 		typedef void (*EntryPoint)(void);
 		EntryPoint ePoint;

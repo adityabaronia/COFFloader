@@ -388,7 +388,7 @@ typedef struct {
 			}
 			printSectionHeader(section_n);
 		}
-   	 ```
+   	 	```
 - Next in line is Symbol table. ``Total numbers of symbols`` and ``pointer to symbol table`` in COFF can be found in ``file header``.
 - Symbol table will have information of all the symbols. For example: ``MessageBox(NULL, "HI", "From example",0);`` MessageBox function uses 2 strings. These strings are used in .text section but these strings are stored in .data section(can be find after iterating symbol table). Assembly of this MessageBox function will look like:
 	- ```asm

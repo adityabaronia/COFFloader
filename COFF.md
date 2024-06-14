@@ -578,7 +578,7 @@ typedef struct {
 				else continue;
 			}
    		}
-   	```
+   		```
 
 - Once done with relocation, find the address of function to be executed. For this starting address of newly allocated .text is saved in a variable and also the offset of the function to execute is also stored in a variable(while parsing symbol table).
 	- ```c
@@ -586,7 +586,7 @@ typedef struct {
 		EntryPoint ePoint;
 		ePoint = AddressOfTextSection + offsetOfEntryPoint;
 		ePoint(); 
-  	``` 
+ 		``` 
 
 # Reference
 1. https://learn.microsoft.com/en-us/windows/win32/debug/pe-format

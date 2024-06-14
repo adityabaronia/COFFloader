@@ -340,7 +340,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if (sTable->StorageClass == 2 && sTable->SectionNumber == 0) {
+		if (sTable->StorageClass == 2 /*&& sTable->SectionNumber == 0*/) {
 			printf("A value that Microsoft tools use for external symbols\n");
 			externalFuncCount += 1;
 		}
@@ -395,7 +395,7 @@ int main(int argc, char* argv[]) {
 			}
 
 			printf("Symbol table index, address that is to be used for reloc: 0x%x\n", relocTable->SymbolTableIndex); // SymbolTableIndex is 0 based
-			printf("Address\offset of item to which reloc is appiled: 0x%x\n", relocTable->VirtualAddress);
+			printf("Address/offset of item to which reloc is appiled: 0x%x\n", relocTable->VirtualAddress);
 			printf("Type of reloc 0x%x\n", relocTable->Type);
 
 
@@ -456,14 +456,27 @@ int main(int argc, char* argv[]) {
 				else if (sTable[relocTable->SymbolTableIndex].SectionNumber != 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2 && sTable[relocTable->SymbolTableIndex].Type == 0x20) {
 					printf("This type of symbols are functions as of now and are located in same section means .text section\n");
 					symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
-					printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
+					printf("symOffsetUsed: 0x%p\n", symOffsetUsed);
 					symOffsetDef -= (symOffsetUsed + 4);
 					memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
 				}
+				else if (sTable[relocTable->SymbolTableIndex].SectionNumber != 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2 ) {
+					printf("probably this will be global variable\n");
+					symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value ; /*no idea why there is offset of 8 with global variable*/
+					//got[gotIndex] = VirtualAlloc(NULL, 8, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+					//memcpy(got[gotIndex], &symOffsetDef, 8);
+
+					printf("symOffsetUsed: 0x%p\n", symOffsetUsed);
+					symOffsetDef -= (symOffsetUsed + 4 );
+					//offset = got[gotIndex] - (symOffsetUsed + 4);
+					//memcpy(symOffsetUsed, &offset, sizeof(UINT32));
+					memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
+					gotIndex += 1;
+				}
 				else if (sTable[relocTable->SymbolTableIndex].StorageClass == 3) {
 					symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
-					printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
-					printf("symOffsetDef: 0x%x \n", symOffsetDef);
+					printf("symOffsetUsed: 0x%p\n", symOffsetUsed);
+					printf("symOffsetDef: 0x%p \n", symOffsetDef);
 					symOffsetDef -= (symOffsetUsed + 4);
 					memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
 				}
@@ -474,48 +487,48 @@ int main(int argc, char* argv[]) {
 			else if (relocTable->Type == 5) { printf("The 32-bit address relative to byte distance 1 from the relocation.\n"); }
 			else if (relocTable->Type == 6) { 
 				printf("The 32-bit address relative to byte distance 2 from the relocation.\n"); 
-				printf("The 32-bit relative address from the byte following the relocation. needed to make global variables to work correctly\n");
+				//printf("The 32-bit relative address from the byte following the relocation. needed to make global variables to work correctly\n");
 
-				symOffsetUsed = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
-					relocTable->VirtualAddress;/*This virtual address is offset from the section where symbol is used*/
+				//symOffsetUsed = sectionMapping[i] /*current section in which we are parsing for symbol used*/ +
+				//	relocTable->VirtualAddress;/*This virtual address is offset from the section where symbol is used*/
 
-				printf("symbol address from the newly allocated section: %x\n", symOffsetUsed);
-				printf("section number: %d\n", sTable[relocTable->SymbolTableIndex].SectionNumber);
-				printf("Storage class of Symbol: 0x%x. \n", sTable[relocTable->SymbolTableIndex].StorageClass);
-				printf("Type of symbol: 0x%x\n", sTable[relocTable->SymbolTableIndex].Type);
+				//printf("symbol address from the newly allocated section: %x\n", symOffsetUsed);
+				//printf("section number: %d\n", sTable[relocTable->SymbolTableIndex].SectionNumber);
+				//printf("Storage class of Symbol: 0x%x. \n", sTable[relocTable->SymbolTableIndex].StorageClass);
+				//printf("Type of symbol: 0x%x\n", sTable[relocTable->SymbolTableIndex].Type);
 
-				if (sTable[relocTable->SymbolTableIndex].SectionNumber == 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2) {
-					printf("THIS IS EXTERNAL FUNCTION HAS TO BE DYNAMICALLY LINKED\n");
-					got[gotIndex] = VirtualAlloc(NULL, 8, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-					functionAddr = functionFinder(functionSymbolName);
-					printf("Actual memory address of the function used in symbol: 0x%x\n", functionAddr);
+				//if (sTable[relocTable->SymbolTableIndex].SectionNumber == 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2) {
+				//	printf("THIS IS EXTERNAL FUNCTION HAS TO BE DYNAMICALLY LINKED\n");
+				//	got[gotIndex] = VirtualAlloc(NULL, 8, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+				//	functionAddr = functionFinder(functionSymbolName);
+				//	printf("Actual memory address of the function used in symbol: 0x%x\n", functionAddr);
 
-					if (functionAddr)
-						memcpy(got[gotIndex], &functionAddr, 8);
-					rip = symOffsetUsed + 4;
-					UINT64 final = *(got + gotIndex);
-					offset = final - rip;
-					offset += 2;
-					memcpy(symOffsetUsed, &offset, sizeof(UINT32));
-					gotIndex += 1;
-				}
-				else if (sTable[relocTable->SymbolTableIndex].SectionNumber != 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2 && sTable[relocTable->SymbolTableIndex].Type == 0x20) {
-					printf("This type of symbols are functions as of now and are located in same section means .text section\n");
-					symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
-					printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
-					symOffsetDef -= (symOffsetUsed + 4);
-					symOffsetDef += 2;
-					memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
-				}
-				else if (sTable[relocTable->SymbolTableIndex].StorageClass == 3) {
-					symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
-					printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
-					printf("symOffsetDef: 0x%x \n", symOffsetDef);
-					symOffsetDef -= (symOffsetUsed + 4);
-					symOffsetDef += 2;
-					memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
-				}
-				else {}
+				//	if (functionAddr)
+				//		memcpy(got[gotIndex], &functionAddr, 8);
+				//	rip = symOffsetUsed + 4;
+				//	UINT64 final = *(got + gotIndex);
+				//	offset = final - rip;
+				//	offset += 2;
+				//	memcpy(symOffsetUsed, &offset, sizeof(UINT32));
+				//	gotIndex += 1;
+				//}
+				//else if (sTable[relocTable->SymbolTableIndex].SectionNumber != 0 && sTable[relocTable->SymbolTableIndex].StorageClass == 2 && sTable[relocTable->SymbolTableIndex].Type == 0x20) {
+				//	printf("This type of symbols are functions as of now and are located in same section means .text section\n");
+				//	symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
+				//	printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
+				//	symOffsetDef -= (symOffsetUsed + 4);
+				//	symOffsetDef += 2;
+				//	memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
+				//}
+				//else if (sTable[relocTable->SymbolTableIndex].StorageClass == 3) {
+				//	symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
+				//	printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
+				//	printf("symOffsetDef: 0x%x \n", symOffsetDef);
+				//	symOffsetDef -= (symOffsetUsed + 4);
+				//	symOffsetDef += 2;
+				//	memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
+				//}
+				//else {}
 			}
 			else if (relocTable->Type == 7) { printf("The 32-bit address relative to byte distance 3 from the relocation.\n"); }
 			else if (relocTable->Type == 8) { printf("The 32-bit address relative to byte distance 4 from the relocation.\n"); }

@@ -153,14 +153,14 @@ void* functionFinder(char* functionSymbol) {
 		}
 		printf("Will find functions in Windows DLLs\n");
 		const char* prefix = "__imp_";
-		const char* prefix2 = "__imp__";
+		/*const char* prefix2 = "__imp__";*/
 		size_t prefixLen = strlen(prefix);
-		size_t prefixLen2 = strlen(prefix2);
+		/*size_t prefixLen2 = strlen(prefix2);*/
 
-		if(strncmp(functionSymbol, prefix2, prefixLen2) == 0) {
-			 functionSymbol = functionSymbol + prefixLen2;  // Return pointer to the remainder of the string
-		}
-		else if(strncmp(functionSymbol, prefix, prefixLen) == 0) {
+		//if(strncmp(functionSymbol, prefix2, prefixLen2) == 0) {
+		//	 functionSymbol = functionSymbol + prefixLen2;  // Return pointer to the remainder of the string
+		//}
+		if(strncmp(functionSymbol, prefix, prefixLen) == 0) {
 			functionSymbol = functionSymbol + prefixLen;  // Return pointer to the remainder of the string
 		}
 		functionSymbol = strtok(functionSymbol, "@");
@@ -495,7 +495,7 @@ int main(int argc, char* argv[]) {
 					rip = symOffsetUsed + 4;
 					UINT64 final = *(got + gotIndex);
 					offset = final - rip;
-					//offset += 2;
+					offset += 2;
 					memcpy(symOffsetUsed, &offset, sizeof(UINT32));
 					gotIndex += 1;
 				}
@@ -504,7 +504,7 @@ int main(int argc, char* argv[]) {
 					symOffsetDef = sectionMapping[sTable[relocTable->SymbolTableIndex].SectionNumber - 1] + sTable[relocTable->SymbolTableIndex].Value;
 					printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
 					symOffsetDef -= (symOffsetUsed + 4);
-					//symOffsetDef += 2;
+					symOffsetDef += 2;
 					memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
 				}
 				else if (sTable[relocTable->SymbolTableIndex].StorageClass == 3) {
@@ -512,7 +512,7 @@ int main(int argc, char* argv[]) {
 					printf("symOffsetUsed: 0x%x\n", symOffsetUsed);
 					printf("symOffsetDef: 0x%x \n", symOffsetDef);
 					symOffsetDef -= (symOffsetUsed + 4);
-					//symOffsetDef += 2;
+					symOffsetDef += 2;
 					memcpy(symOffsetUsed, &symOffsetDef, sizeof(UINT32));
 				}
 				else {}

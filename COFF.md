@@ -267,7 +267,7 @@ typedef struct {
 	UINT16 machine; //uint16_t
 	UINT16 numberOfSection; //uint16_t
 	UINT32 timeStamp; //uint32_t
-	UINT32 filePtrSmblTbl; // file pointer to symbol table //uint32_t
+	UINT32 pointerToSymbolTable; // file pointer to symbol table //uint32_t
 	UINT32 noOfSymbols; //uint16_t
 	UINT16 sizeOfOptionalHeader;  //uint16_t
 	UINT16 characteristics; //uint16_t
@@ -352,3 +352,13 @@ typedef struct {
 | section | The basic unit of code or data within a PE or COFF file. For example, all code in an object file can be combined within a single section or (depending on compiler behavior) each function can occupy its own section. With more sections, there is more file overhead, but the linker is able to link in code more selectively. A section is similar to a segment in Intel 8086 architecture. All the raw data in a section must be loaded contiguously. In addition, an image file can contain a number of sections, such as .tls or .reloc , which have special purposes. |
 | file pointer | The location of an item within the file itself, before being processed by the linker (in the case of object files) or the loader (in the case of image files). In other words, this is a position within the file as stored on disk. |
 | Relative virtual address (RVA) | In an image file, this is the address of an item after it is loaded into memory, with the base address of the image file subtracted from it. The RVA of an item almost always differs from its position within the file on disk (file pointer). In an object file, an RVA is less meaningful because memory locations are not assigned. In this case, an RVA would be an address within a section (described later in this table), to which a relocation is later applied during linking. For simplicity, a compiler should just set the first RVA in each section to zero. |
+| Virtual Address (VA) | Same as RVA, except that the base address of the image file is not subtracted. The address is called a VA because Windows creates a distinct VA space for each process, independent of physical memory. For almost all purposes, a VA should be considered just an address. A VA is not as predictable as an RVA because the loader might not load the image at its preferred location. |
+
+
+# Dive into development of COFF loader
+- Read the ``.obj`` file into memory.
+- Use the ``fileHeader`` structure to parse the data into memory to know about ``numberOfSection``, ``pointerToSymbolTable``, ``noOfSymbols`` and save them in variables.
+	-	```
+		fileHeader* fheader;
+		fheader = (fileHeader*)objFileInMem; //objFileInMem this is were object file can be read
+		```

@@ -289,6 +289,7 @@ typedef struct {
 | 32     | 2    | NumberOfRelocations  | The number of relocation entries for the section. This is set to zero for executable images.                                                                                                                                                                                                                                                                                                 |
 | 34     | 2    | NumberOfLinenumbers  | The number of line-number entries for the section. This value should be zero for an image because COFF debugging information is deprecated.                                                                                                                                                                                                                                                  |
 | 36     | 4    | Characteristics      | The flags that describe the characteristics of the section. For more information, see Section Flags.                                                                                                                                                                                                                                                                                         |
+
 ```c
 typedef struct {
 	char	Name[8];
@@ -361,20 +362,20 @@ typedef struct {
 # Dive into development of COFF loader
 - Read the ``.obj`` file into memory.
 - Use the ``fileHeader`` structure to parse the data into memory to know about ``numberOfSection``, ``pointerToSymbolTable``, ``noOfSymbols`` and save them in variables.
-	-	```c
+	```c
 		fileHeader* fheader;
 		fheader = (fileHeader*)objFileInMem; //objFileInMem this is were object file can be read
-		```
+	```
 - Now each of the section needs to be copied in memory ; there should be a pointer to pointers variable (array of pointers) that can hold the address of all the newly allocated sections.
-	- ```c
+	 ```c
 		char** sectionMapping;
    		sectionMapping = calloc(fheader->numberOfSection, 8); // because size of address in 64-bit machine is 8
-   	```
+   	 ```
 - Section header falls right after the file header. This means if size of fileheader is 20 bytes then the first section header will be at 21st offset and next section header will be right after 1st section header . If size of each section header is 40 bytes then next section will be at ``size of 1st section header + size of file header``
 - Iterate across all the section present in COFF using a for-loop
 	- Find the address of the .text section because this where the function to execute will be present.
  	- Keep a count of number of relocations for each section in `totalRelocation`, to finally get a count of the relocations in COFF globally.
-	- ```c
+	     ```c
    		for (int i = 0; i < fheader->numberOfSection; i++) {
 			section_n = (size_t)objFileInMem + (size_t)sizeof(fileHeader) + i * (size_t)sizeof(sectionHeader);;
 			sectionMapping[i] = VirtualAlloc(NULL, section_n->SizeOfRawData, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);

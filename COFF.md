@@ -1,6 +1,8 @@
+# Unveiling the COFF Loader
+In the realm of Windows programming and cybersecurity, understanding COFF (Common Object File Format) is essential, especially when exploring its compilation process, headers, and the intricate details of COFFLoader implementation. This blog explores how to parse COFF headers effectively and dives into the mechanics of building and utilizing COFFLoader, shedding light on its critical role in executable file manipulation and cybersecurity practices.
 
-
-# C file
+## C file
+Using the provided C code, we will examine the COFF format, gaining insights into its compilation process and understanding its headers.
 ```C
 #include <Windows.h>
 
@@ -26,12 +28,13 @@ int GO(){
 }
 ```
 
-# Compilation
+## Compilation Process
+The code is compiled using the Microsoft Visual C++ compiler (cl.exe) with the following command:
 ```bash
 cl.exe /MT /c CreateFile.c
 ```
 
-# COFF Header
+## COFF Header Analysis
 ```asm
 C:\Users\smoke.REDTEAMER\Desktop\COFFLoader>dumpbin /HEADERS CreateFile.obj
 Microsoft (R) COFF/PE Dumper Version 14.38.33133.0
@@ -168,7 +171,7 @@ SECTION HEADER #7
           10 .xdata
 ```
 
-# Disassembly 
+## Disassembly
 ```asm
 C:\Users\smoke.REDTEAMER\Desktop\COFFLoader>dumpbin /DISASM CreateFile.obj
 Microsoft (R) COFF/PE Dumper Version 14.38.33133.0

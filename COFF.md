@@ -361,19 +361,19 @@ typedef struct {
 # Dive into development of COFF loader
 - Read the ``.obj`` file into memory.
 - Use the ``fileHeader`` structure to parse the data into memory to know about ``numberOfSection``, ``pointerToSymbolTable``, ``noOfSymbols`` and save them in variables.
-	-	```
+	-	```c
 		fileHeader* fheader;
 		fheader = (fileHeader*)objFileInMem; //objFileInMem this is were object file can be read
 		```
-- Now each of the section needs to be copied in memory ; there should be a pointer to pointers variable that can hold the address of all the newly allocated sections.
+- Now each of the section needs to be copied in memory ; there should be a pointer to pointers variable (array of pointers) that can hold the address of all the newly allocated sections.
 	- ```c
 		char** sectionMapping;
    		sectionMapping = calloc(fheader->numberOfSection, 8); // because size of address in 64-bit machine is 8
    	```
 - Section header falls right after the file header. This means if size of fileheader is 20 bytes then the first section header will be at 21st offset and next section header will be right after 1st section header . If size of each section header is 40 bytes then next section will be at ``size of 1st section header + size of file header``
-- Make a for loop for number of section to iterate all the section present in COFF.
+- Iterate across all the section present in COFF using a for-loop
 	- Find the address of the .text section because this where the function to execute will be present.
- 	- Each section will have some relocation in it so make sure to know total numner of relocation in whole COFF.  
+ 	- Keep a count of number of relocations for each section in `totalRelocation`, to finally get a count of the relocations in COFF globally.
 	- ```c
    		for (int i = 0; i < fheader->numberOfSection; i++) {
 			section_n = (size_t)objFileInMem + (size_t)sizeof(fileHeader) + i * (size_t)sizeof(sectionHeader);;
@@ -392,29 +392,33 @@ typedef struct {
 			printSectionHeader(section_n);
 		}
    	 	```
-- Next in line is Symbol table. ``Total numbers of symbols`` and ``pointer to symbol table`` in COFF can be found in ``file header``.
-- Symbol table will have information of all the symbols. For example: ``MessageBox(NULL, "HI", "From example",0);`` MessageBox function uses 2 strings. These strings are used in .text section but these strings are stored in .data section(can be find after iterating symbol table). Assembly of this MessageBox function will look like:
-	- ```asm
+- Next in line is Symbol table. **Total number of symbols** and **pointer to symbol table** in COFF can be found in file header (``fHeader``).
+- Symbol table will have information of all the symbols. For example: MessageBox function takes 2 strings as argument in ``MessageBox(NULL, "HI", "From example",0);``. These strings may be **_used_** in .text section but are actually **_stored_** in .data section (can be found after iterating symbol table). Assembly of this MessageBox function will look like:
+	 ```asm
    	 		  45 33 C9           xor         r9d,r9d
 			  0000000000000007: 4C 8D 05 00 00 00  lea         r8,[$SG74579] // "HI"
 			                    00
 			  000000000000000E: 48 8D 15 00 00 00  lea         rdx,[$SG74580] // "From example"
 			                    00
 			  0000000000000015: 33 C9              xor         ecx,ecx
-			  0000000000000017: FF 15 00 00 00 00  call        qword ptr [__imp_MessageBoxA]```
-   	- So the symbol table will store the information about ``$SG74579``, ``$SG74580``. This information will be a section number where the associated string for each symbol is stored. (Here we are talking only about strings that is why .data section is used. If there is any user-defined function in symbol table then its associated data is also present here)
-   	- Now it can be said that symbol ``$SG74579``, ``$SG74580`` or ``example`` is defined somewhere and is used somewhere else. **Symbol table will be about where the symbol is defined**
+			  0000000000000017: FF 15 00 00 00 00  call        qword ptr [__imp_MessageBoxA]
+	```
+   	- Symbol table will store the _information_ about ``$SG74579``, ``$SG74580`` ("HI" and "From example", respectively). This _information_, as defined in the Symbol Table structure, can tell us the section number where the associated string for each symbol is stored (Here, we are talking only about strings that is why the `.data` section is used. If there is any user-defined function in the symbol table, then its associated data will also be present here).
+   	- Now it can be said that the symbols: ``$SG74579``, ``$SG74580`` or `example` are _defined_ in one section and are used in some other section (usually, but not necessarily `.text` section)
+   	>>**Symbol table informs us about where the symbol is defined.**
    
-	- Each symbol is stored in symbol pointer table, this means each symbol table will have a fixed size. Also total number of symbol tables will be equal to the total number of symbols.
-   	- The 1st symbol can be found at the pointer to symbol table but to find the next symbol table:
-   		-  ```c
-			symbolTable* sTable;
-	   	    	sTable = (UINT64)objFileInMem + fheader->pointerToSymbolTable + i * sizeof(symbolTable); // here i is number of symbol pointer whose info is required
-   	          ```
-	- Symbols in COFF are represented by string. If the symbol name string is of size 8 bytes or less, then symbol name can be found at ``sTable->first.Name`` else there is ``symbol string table`` where the strings are present. This ``symbol string table`` is located right after all symbol tables.
- 	- There can be n number of string present in ``symbol string table``. So to find the offset of string in ``symbol string table`` ``sTable->first.value[1]`` is used.
-  	- To know if the ``symbol name`` size is less than or equal to 8 bytes, look for ``sTable->first.value[1]``. If this value is ``0`` then the name of symbol is more than 8 bytes and the symbol name can be found at ``sTable->first.value[1]`` offset inside the ``symbol string table``.
-  	- ```c
+	- Information for each symbol is stored in the symbol pointer table as a **record**. Each record will have a fixed size. Thus, the Symbol Table will contain records equal to the total number of symbols.
+   	- The first symbol record can be found at the pointer to symbol table. The next record can be found using the following logic:
+    	```c
+		symbolTable* sTable;
+	   	   	sTable = (UINT64)objFileInMem + fheader->pointerToSymbolTable + i * sizeof(symbolTable);
+	   	   	// here i is the index of the record whose info is required
+   	     ```
+	- Symbols in COFF are represented by strings. If the symbol name string is of size 8 bytes or less, then symbol name can be found at ``sTable->first.Name``, else there is a **symbol string table** where the strings are present. This **symbol string table** is located right after the symbol table.
+	- To know if the ``symbol name`` size is less than or equal to 8 bytes, look for ``sTable->first.value[0]``. If this value is ``0`` then the name of symbol is more than 8 bytes and the symbol name can be found at ``sTable->first.value[1]`` offset inside the ``symbol string table``.
+ 	- There can be _n_ number of strings present in **symbol string table** and each string will be at some offset from starting of **symbol string table** . To find the offset of string in **symbol string table** following logic should be used:  ``sTable->first.value[1]``.
+  	
+  	    ```c
   	  for (int i = 0; i < fheader->noOfSymbols; i++) {
 		sTable = (UINT64)objFileInMem + fheader->pointerToSymbolTable + i * sizeof(symbolTable);
   	  	if (!(sTable->first.value[0]))
@@ -427,40 +431,40 @@ typedef struct {
 		else { 
 			functionName = sTable->first.Name;
 		}
-  	  ```
-	- Other interesting member of ``symbolTable`` structures are ``Value``, ``SectionNumber``, ``Type``, ``StorageClass``. Information about these members can be found at ``https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#coff-symbol-table``
- 	- At the end, the COFF loader is required to execute the entry point function of the object file. This entry point function and other locally defined functions can be found with this:
-  		- ```c
+  	     ```
+	- Other interesting member of ``symbolTable`` structures are ``Value``, ``SectionNumber``, ``Type``, ``StorageClass``. Information about these members can be found at _https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#coff-symbol-table_
+ 	- At the end, the COFF loader is required to execute the entry point function of the object file. This entry point function and other locally defined functions can be found using this logic:
+  		 ```c
 			if (sTable->StorageClass == 2 && sTable->SectionNumber != 0) {
 				printf("internal function\n");
 				if (strcmp(functionName, argv[2]) == 0) { //argv[2] is the name of function that is required to execute
 					offsetOfEntryPoint = sTable->Value;
 				}
 			}
-       		```
-        - All the external functions(WINAPIs) can be found with this condition. It is required to note the ``total number of external functions and other external symbols`` used in the object file.
-        	- ```c
-				if (sTable->StorageClass == 2 && sTable->SectionNumber == 0) {
-					printf("A value that Microsoft tools use for external symbols\n");
-					externalFuncCount += 1;
-				}
-          		 ```     
-- One important table in COFF is the ``relocation table``. While iterating through the relocation table all the symbols required by COFF loader to execute the object file will be resolved and the reference will be applied.
-- As discussed while parsing the symbol table, symbols are defined somewhere but used somewhere else(mostly test section). **The relocation table will tell about where the symbol is used**.
-- Reference to all the imported functions is required to make a successful COFF loader. To do this, a separate GOT(Global offset table) is required, where the address of all the imported functions(external function) will be saved. To do this again a pointer to pointers variable is required or say an array that can store addresses ``got = calloc(externalFuncCount, 8);``.
-- Each section will have some relocation. To find the relocation in each section again iterate through each section and find number of relocation in it, Then iterate through those relocations.
-	- ```c
+       	```
+    - All the external functions(WINAPIs) can be found with this condition. It is required to note the ``total number of external functions and other external symbols`` used in the object file.
+    	```c
+			if (sTable->StorageClass == 2 && sTable->SectionNumber == 0) {
+				printf("A value that Microsoft tools use for external symbols\n");
+				externalFuncCount += 1;
+			}
+      	 ```     
+- One important table in COFF is the **relocation table**. While iterating through the relocation table all the symbols required by COFF loader to execute the object file will be resolved and the reference will be applied.
+- As discussed while parsing the symbol table, symbols are defined in one section but are used another (mostly .text section). **The relocation table tell about where the symbol is used**.
+- Reference to all the imported functions (external functions) is required to make a successful COFF loader. To do this, a separate GOT(Global offset table) is required, where the address of all the imported functions (external function) will be saved. To do this, again a pointer to pointers variable(array of pointers) is required that can store addresses. Flowwing logic can be used to make a pointer of pointers for global offset table:  ``got = calloc(externalFuncCount, 8);``.
+- Each sectionmight have some relocation. To find the relocation in those section, iterate through each section and find number of relocation in it, Then iterate through those relocations.
+	 ```c
 			for (UINT32 i = 0; i < fheader->numberOfSection; i++) {
    				section_n = (size_t)objFileInMem + (size_t)sizeof(fileHeader) + i * (size_t)sizeof(sectionHeader);
    				for (UINT32 j = 0; j < section_n->NumberOfRelocations; j++) {
    					relocTable = (size_t)objFileInMem + section_n->PointerToRelocations + j * sizeof(relocationTable);
   				}
   			}
-  		 ```
-   	- This is for parsing through the relocation table
-- To resolve all the symbols,  relocation table, and symbol table are required. Both of the tables will provide the data required to resolve the relocations. **relocation table will provide information where the symbols are used** and **symbol table will provide where the symbols are defined**.
+  	```
+   
+- To resolve all the symbols,  relocation table, and symbol table are required. Both of the tables will provide the data required to resolve the relocations. 
 - The code for resolving relocation will look like:
-	- ```c
+	 ```c
 		   section_n = 0;
 		got = calloc(externalFuncCount, 8);
 		sTable = (UINT64)objFileInMem + fheader->filePtrSmblTbl;
@@ -581,15 +585,15 @@ typedef struct {
 				else continue;
 			}
    		}
-   		```
+   	```
 
 - Once done with relocation, find the address of the function to be executed. For this, the starting address of the newly allocated .text is saved in a variable and also the offset of the function to execute is stored in a variable(while parsing the symbol table).
-	- ```c
+	 ```c
 		typedef void (*EntryPoint)(void);
 		EntryPoint ePoint;
 		ePoint = AddressOfTextSection + offsetOfEntryPoint;
 		ePoint(); 
- 		``` 
+ 	``` 
 
 # Reference
 1. https://learn.microsoft.com/en-us/windows/win32/debug/pe-format

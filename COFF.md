@@ -273,6 +273,8 @@ typedef struct {
 }fileHeader;
 ```
 
+
+
 ## COFF section header and its structure
 
 | Offset | Size | Field                | Description                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -327,6 +329,8 @@ typedef struct {
 	BYTE NumberOfAuxSymbols;
 }symbolTable;
 ```
+
+
 
 ## COFF relocations table in object files and its structure
 | Offset | Size | Field             | Description                                                                                                                                                                                                                       |

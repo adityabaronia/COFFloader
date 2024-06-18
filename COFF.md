@@ -168,7 +168,6 @@ SECTION HEADER #7
           10 .xdata
 ```
 
-
 # Disassembly 
 ```asm
 C:\Users\smoke.REDTEAMER\Desktop\COFFLoader>dumpbin /DISASM CreateFile.obj
